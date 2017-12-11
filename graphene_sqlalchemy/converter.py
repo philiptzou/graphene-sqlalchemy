@@ -144,7 +144,16 @@ def convert_enum_to_enum(type, column, registry=None):
 @convert_sqlalchemy_type.register(ChoiceType)
 def convert_column_to_enum(type, column, registry=None):
     name = '{}_{}'.format(column.table.name, column.name).upper()
-    return Enum(name, type.choices, description=get_column_doc(column))
+    enum_class = Enum(name, type.choices, description=get_column_doc(column))
+
+    def serialize(self, value):
+        enum_value = self._value_lookup.get(value.value)
+        if enum_value:
+            return enum_value.name
+        return None
+
+    enum_class.serialize = staticmethod(serialize)
+    return enum_class(required=not(column.nullable))
 
 
 @convert_sqlalchemy_type.register(ScalarListType)
